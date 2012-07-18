@@ -1,0 +1,118 @@
+
+GraphicsWindow.DrawText(260, 200, "Downloading...")
+
+' Prepare variables and constants.
+BASECOLOFQ1 = 3
+NUMOFCHOICEOFQ1 = 6
+For c=1 to NUMOFCHOICEOFQ1
+  countPerChoice[c] = 0
+EndFor
+
+' Download replies of survey as CSV format.
+csvContent = Network.GetWebPageContents("http://code2012survey2csv.apphb.com/replies/ascsv?safeformat=true&header=false")
+
+' Split CSV to lines.
+r = 1
+CRLF = Text.GetCharacter(13) + Text.GetCharacter(10)
+n = Text.GetIndexOf(csvContent, CRLF)
+While n > 0
+  csvRows[r] = Text.GetSubText(csvContent, 1, n - 1)
+  csvContent = Text.GetSubTextToEnd(csvContent, n+2)
+  r = r + 1
+  n = Text.GetIndexOf(csvContent, CRLF)
+EndWhile
+
+For r=1 to Array.GetItemCount(csvRows)
+
+  ' Split line to columns.
+  csvRow = csvRows[r]
+  c = 1
+  n = Text.GetIndexOf(csvRow, ",")
+  While n > 0
+    csvCols[c] = Text.GetSubText(csvRow, 1, n -1)
+    csvRow = Text.GetSubTextToEnd(csvRow, n + 1)
+    c = c + 1
+    n = Text.GetIndexOf(csvRow, ",")
+  EndWhile
+  
+  ' Sum up per choices.
+  For c=1 to NUMOFCHOICEOFQ1
+    csvCol = csvCols[c + BASECOLOFQ1 - 1]
+    If Text.IsSubText(csvCol, "True") Then
+      countPerChoice[c] = countPerChoice[c] + 1
+    EndIf
+  EndFor
+  
+EndFor
+
+' Calicurating rates.
+maxCount = 0
+For c=1 to Array.GetItemCount(countPerChoice)
+  maxCount = Math.Max(maxCount, countPerChoice[c])
+EndFor
+
+For c=1 to Array.GetItemCount(countPerChoice)
+  rates[c] = countPerChoice[c] * 100 / maxCount
+  'TextWindow.WriteLine(rates[c])
+EndFor
+
+' Draw Captions.
+GraphicsWindow.Clear()
+captions[1] = "創作の楽しみ"
+captions[2] = "結果がすぐ出る"
+captions[3] = "解くのが好き"
+captions[4] = "人が苦手"
+captions[5] = "必要に迫られ"
+captions[6] = "稼ぐため"
+For i=1 to Array.GetItemCount(captions)
+  caption = captions[i]
+  GraphicsWindow.DrawText(20 + (i-1) * 100, 410, caption)
+EndFor
+
+' Go to Start Position.
+Turtle.Speed = 9
+Turtle.PenUp()
+Turtle.TurnLeft()
+Turtle.Move(310)
+Turtle.TurnLeft()
+Turtle.Move(160)
+Turtle.TurnLeft()
+
+Turtle.PenDown()
+
+GraphicsWindow.DrawText(260, 200, "Ready! Click here!")
+
+GraphicsWindow.MouseDown = DoDrawing
+
+' Draw bar chart!
+Sub DoDrawing
+  
+  orgBrushColor = GraphicsWindow.BrushColor
+  GraphicsWindow.BrushColor = GraphicsWindow.GetColorFromRGB(255,255,255)
+  GraphicsWindow.FillRectangle(260,200,200,40)
+  GraphicsWindow.BrushColor = orgBrushColor
+  
+  For i = 1 to Array.GetItemCount(rates)
+    rate = rates[i]
+    count = countPerChoice[i]
+    DrawBar()
+  EndFor
+EndSub
+
+Sub DrawBar
+  MAXBARHEIGHT = 380
+  barheight = MAXBARHEIGHT * rate / 100
+  Turtle.Move(10)
+  Turtle.TurnLeft()
+  Turtle.Move(barheight)
+  Turtle.TurnRight()
+  
+  Turtle.Move(40)
+  GraphicsWindow.DrawText(Turtle.X - 8, Turtle.Y + 8, count)
+  Turtle.Move(40)
+  
+  Turtle.TurnRight()
+  Turtle.Move(barheight)
+  Turtle.TurnLeft()
+  Turtle.Move(10)
+EndSub
